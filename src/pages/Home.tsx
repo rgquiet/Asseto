@@ -18,14 +18,14 @@ import { FilesystemDirectory, FilesystemEncoding, Plugins } from '@capacitor/cor
 import React, { useEffect, useState } from 'react';
 import Balance from '../components/Balance';
 import Portfolio from '../components/Portfolio';
+import PortfolioDTO from '../dto/PortfolioDTO';
 import './Home.css';
 
 const { Filesystem } = Plugins;
 
 const Home:React.FC = () => {
-    const [data, setData] = useState<any>({});
-    const [temp, setTemp] = useState<string>('');
-    const [portfolios, setPortfolios] = useState<string[]>([]);
+    const [portfolio, setPortfolio] = useState<PortfolioDTO>(new PortfolioDTO(''));
+    const [portfolioNames, setPortfolioNames] = useState<string[]>([]);
     const [modalPortfolio, setModalPortfolio] = useState<boolean>(false);
     const [alertNew, setAlertNew] = useState<boolean>(false);
     const [alertReplace, setAlertReplace] = useState<boolean>(false);
@@ -37,44 +37,42 @@ const Home:React.FC = () => {
         }).then((dir) => {
             const allPortfolios:string[] = [];
             dir.files.forEach((name) => allPortfolios.push(name.slice(0, -5)));
-            setPortfolios(allPortfolios);
+            setPortfolioNames(allPortfolios);
         });
     }, []);
 
     const showPortfolio = (name:string) => {
         readFile(name);
-        setTemp(name);
         setModalPortfolio(true);
     }
 
     const closePortfolio = () => {
         setModalPortfolio(false);
-        setTemp('');
-        setData({});
+        setPortfolio(new PortfolioDTO(''));
     }
 
     const createPortfolio = (name:string) => {
         if(name !== '') {
-            if(portfolios.includes(name)) {
-                setTemp(name);
+            if(portfolioNames.includes(name)) {
+                setPortfolio(new PortfolioDTO(name));
                 setAlertReplace(true);
             } else {
-                writeFile(name);
+                createFile(name);
             }
         }
     }
 
-    const writeFile = (name:string) => {
+    const createFile = (name:string) => {
         Filesystem.writeFile({
             path: name + '.json',
-            data: '{ "cash" : 100, "balance" : [1, 2, 3] }',
+            data: JSON.stringify(new PortfolioDTO(name)),
             directory: FilesystemDirectory.Data,
             encoding: FilesystemEncoding.UTF8
         }).then(() => {
-            if(temp !== name) {
-                setPortfolios([name, ...portfolios]);
+            if(portfolio['name'] !== name) {
+                setPortfolioNames([name, ...portfolioNames]);
             }
-            setTemp('');
+            setPortfolio(new PortfolioDTO(''));
         });
     }
 
@@ -83,7 +81,7 @@ const Home:React.FC = () => {
             path: name + '.json',
             directory: FilesystemDirectory.Data
         }).then((result) => {
-            setData(JSON.parse(result.data));
+            setPortfolio(JSON.parse(result.data));
         });
     }
 
@@ -102,7 +100,7 @@ const Home:React.FC = () => {
             </IonHeader>
             <IonContent class='ion-padding'>
                 <IonList>
-                    {portfolios.map((value:string, index:number) =>
+                    {portfolioNames.map((value:string, index:number) =>
                         <Portfolio handler={showPortfolio} value={value} key={index}/>
                     )}
                 </IonList>
@@ -114,7 +112,7 @@ const Home:React.FC = () => {
                                     <IonIcon slot='icon-only' icon={arrowBackOutline}/>
                                 </IonButton>
                             </IonButtons>
-                            <IonTitle class='ion-text-center'>{temp}</IonTitle>
+                            <IonTitle class='ion-text-center'>{portfolio['name']}</IonTitle>
                             <IonButtons slot='secondary'>
                                 <IonButton onClick={() => console.log('wip: Save changes in portfolio')}>
                                     <IonIcon slot='icon-only' icon={saveOutline}/>
@@ -122,9 +120,7 @@ const Home:React.FC = () => {
                             </IonButtons>
                         </IonToolbar>
                     </IonHeader>
-                    <IonContent class='ion-padding'>
-                        <Balance data={data}/>
-                    </IonContent>
+                    <Balance data={portfolio}/>
                 </IonModal>
                 <IonAlert
                     isOpen={alertNew}
@@ -140,26 +136,24 @@ const Home:React.FC = () => {
                     buttons={[
                         {
                             text: 'Create',
-                            handler: (data) => {
-                                createPortfolio(data.name)
-                            }
-                        },
-                        'Cancel'
+                            handler: (data) => {createPortfolio(data.name)}
+                        }, 'Cancel'
                     ]}
                 />
                 <IonAlert
                     isOpen={alertReplace}
                     onDidDismiss={() => setAlertReplace(false)}
                     header={'Warning'}
-                    message={'There is already a portfolio with the name ' + temp + '! Do you want to replace it?'}
+                    message={
+                        'There is already a portfolio with the name ' +
+                        portfolio['name'] +
+                        '! Do you want to replace it?'
+                    }
                     buttons={[
                         {
                             text: 'Yes',
-                            handler: () => {
-                                writeFile(temp)
-                            }
-                        },
-                        'No'
+                            handler: () => {createFile(portfolio['name'])}
+                        }, 'No'
                     ]}
                 />
             </IonContent>

@@ -1,21 +1,22 @@
 import {
-    IonAlert,
+    IonLabel,
+    IonTitle,
+    IonImg,
+    IonIcon,
     IonButton,
     IonButtons,
-    IonContent,
-    IonHeader,
-    IonIcon,
-    IonImg,
-    IonLabel,
     IonList,
+    IonToast,
+    IonAlert,
     IonModal,
-    IonPage,
-    IonTitle,
-    IonToolbar
+    IonContent,
+    IonToolbar,
+    IonHeader,
+    IonPage
 } from '@ionic/react';
 import { addOutline, arrowBackOutline, saveOutline } from 'ionicons/icons';
 import { FilesystemDirectory, FilesystemEncoding, Plugins } from '@capacitor/core';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Balance from '../components/Balance';
 import Portfolio from '../components/Portfolio';
 import PortfolioDTO from '../dto/PortfolioDTO';
@@ -27,6 +28,7 @@ const Home:React.FC = () => {
     const [portfolio, setPortfolio] = useState<PortfolioDTO>(new PortfolioDTO(''));
     const [portfolioNames, setPortfolioNames] = useState<string[]>([]);
     const [modalPortfolio, setModalPortfolio] = useState<boolean>(false);
+    const [toastSave, setToastSave] = useState<boolean>(false);
     const [alertNew, setAlertNew] = useState<boolean>(false);
     const [alertReplace, setAlertReplace] = useState<boolean>(false);
 
@@ -76,6 +78,17 @@ const Home:React.FC = () => {
         });
     }
 
+    const saveFile = () => {
+        Filesystem.writeFile({
+            path: portfolio['name'] + '.json',
+            data: JSON.stringify(portfolio),
+            directory: FilesystemDirectory.Data,
+            encoding: FilesystemEncoding.UTF8
+        }).then(() => {
+            setToastSave(true);
+        });
+    }
+
     const readFile = (name:string) => {
         Filesystem.readFile({
             path: name + '.json',
@@ -114,13 +127,19 @@ const Home:React.FC = () => {
                             </IonButtons>
                             <IonTitle class='ion-text-center'>{portfolio['name']}</IonTitle>
                             <IonButtons slot='secondary'>
-                                <IonButton onClick={() => console.log('wip: Save changes in portfolio')}>
+                                <IonButton onClick={saveFile}>
                                     <IonIcon slot='icon-only' icon={saveOutline}/>
                                 </IonButton>
                             </IonButtons>
                         </IonToolbar>
                     </IonHeader>
                     <Balance data={portfolio}/>
+                    <IonToast
+                        isOpen={toastSave}
+                        onDidDismiss={() => setToastSave(false)}
+                        message={'Saved successfully'}
+                        duration={1000}
+                    />
                 </IonModal>
                 <IonAlert
                     isOpen={alertNew}

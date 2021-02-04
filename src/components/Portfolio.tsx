@@ -1,9 +1,9 @@
 import {
-    IonButtons,
-    IonButton,
-    IonIcon,
     IonItem,
-    IonLabel
+    IonLabel,
+    IonIcon,
+    IonButton,
+    IonButtons
 } from '@ionic/react';
 import { settingsOutline } from 'ionicons/icons';
 import React from 'react';

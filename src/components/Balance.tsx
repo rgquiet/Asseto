@@ -45,20 +45,30 @@ const Balance = (props:any) => {
             if(data['cash'] === '') {
                 props.data['cash'] = 0;
             } else {
-                props.data['cash'] = data['cash'];
+                props.data['cash'] = parseFloat(data['cash']);
             }
         }
     }
 
     const editAsset = (data:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
-            props.data['assets'][temp] = new AssetDTO(data['name'], data['amount'], data['price']);
+            let array:AssetDTO[] = [...props.data['assets']];
+            array[temp] = new AssetDTO(
+                data['name'],
+                parseFloat(data['amount']),
+                parseFloat(data['price'])
+            );
+            props.data['assets'] = array;
         }
     }
 
     const addAsset = (data:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
-            props.data['assets'].push(new AssetDTO(data['name'], data['amount'], data['price']));
+            props.data['assets'] = [...props.data['assets'], new AssetDTO(
+                data['name'],
+                parseFloat(data['amount']),
+                parseFloat(data['price'])
+            )];
         }
     }
 

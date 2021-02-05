@@ -94,7 +94,9 @@ const Home:React.FC = () => {
             path: name + '.json',
             directory: FilesystemDirectory.Data
         }).then((result) => {
-            setPortfolio(JSON.parse(result.data));
+            let dto:PortfolioDTO = new PortfolioDTO('');
+            dto.init(JSON.parse(result.data));
+            setPortfolio(dto);
         });
     }
 
@@ -125,7 +127,9 @@ const Home:React.FC = () => {
                                     <IonIcon slot='icon-only' icon={arrowBackOutline}/>
                                 </IonButton>
                             </IonButtons>
-                            <IonTitle class='ion-text-center'>{portfolio['name']}</IonTitle>
+                            <IonTitle class='ion-text-center'>
+                                {portfolio['name']}: {portfolio['sum']}{portfolio['currency']}
+                            </IonTitle>
                             <IonButtons slot='secondary'>
                                 <IonButton onClick={saveFile}>
                                     <IonIcon slot='icon-only' icon={saveOutline}/>

@@ -83,8 +83,11 @@ const Balance = (props:any) => {
                     <IonToggle checked={toggleMode} onIonChange={(event) => changeMode(event.detail.checked)}/>
                 </IonItem>
                 <IonItem onClick={() => setAlertCash(true)} lines='none' style={{marginRight: '16px'}}>
-                    <IonProgressBar value={0.5}/>
-                    <IonBadge slot='end'>100%</IonBadge>
+                    <IonProgressBar value={props.data['cash'] / props.data['sum']}/>
+                    <IonBadge slot='end'>
+                        {(props.data['cash'] / props.data['sum'] * 100).toFixed(1)}
+                        {props.data['sum'] === 0 ? '' : '%'}
+                    </IonBadge>
                 </IonItem>
             </IonCard>
             <IonList>
@@ -108,10 +111,13 @@ const Balance = (props:any) => {
                             </IonRow>
                             <IonRow>
                                 <IonCol>
-                                    <IonProgressBar value={0.5} style={{marginTop: '8px'}}/>
+                                    <IonProgressBar value={value['amount'] * value['price'] / props.data['sum']}
+                                                    style={{marginTop: '8px'}}/>
                                 </IonCol>
                                 <IonCol size='auto'>
-                                    <IonBadge style={{marginLeft: '20px'}}>100%</IonBadge>
+                                    <IonBadge style={{marginLeft: '20px'}}>
+                                        {(100 * value['amount'] * value['price'] / props.data['sum']).toFixed(1)}%
+                                    </IonBadge>
                                 </IonCol>
                             </IonRow>
                         </IonGrid>

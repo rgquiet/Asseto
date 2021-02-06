@@ -1,5 +1,6 @@
 import {
     IonProgressBar,
+    IonRange,
     IonBadge,
     IonLabel,
     IonItem,
@@ -28,16 +29,16 @@ const Balance = (props:any) => {
 
     useEffect(() => {
         if(temp === -1) {
-            setAlertEditAsset(false)
+            setAlertEditAsset(false);
         } else {
-            setAlertEditAsset(true);
+            if(toggleMode) {
+                setAlertEditAsset(true);
+            } else {
+                // wip: Only updated when temp changes (add props.data to deps)
+                setTemp(-1);
+            }
         }
     }, [temp]);
-
-    const changeMode = (mode:boolean) => {
-        setToggleMode(mode);
-        console.log('wip: Switch between target and current state');
-    }
 
     const editCash = (data:any) => {
         if(data['currency'].replace(/\s/g, '') !== '' && data['cash'] >= 0) {
@@ -56,7 +57,8 @@ const Balance = (props:any) => {
             array[temp] = new AssetDTO(
                 data['name'],
                 parseFloat(data['amount']),
-                parseFloat(data['price'])
+                parseFloat(data['price']),
+                props.data['assets'][temp]['target']
             );
             props.data['assets'] = array;
         }
@@ -67,28 +69,47 @@ const Balance = (props:any) => {
             props.data['assets'] = [...props.data['assets'], new AssetDTO(
                 data['name'],
                 parseFloat(data['amount']),
-                parseFloat(data['price'])
+                parseFloat(data['price']),
+                0
             )];
         }
     }
 
-    // wip: IonRange instead of IonProgressBar
+    const setTarget = (target:number, index:number) => {
+        props.data['assets'][index]['target'] = target;
+        setTemp(index);
+    }
+
     return (
         <IonContent class='ion-padding'>
             <IonCard>
                 <IonItem style={{marginRight: '16px'}}>
-                    <IonLabel onClick={() => setAlertCash(true)}>
+                    <IonLabel onClick={() => setAlertCash(toggleMode)}>
                         Cash: {props.data['cash']}{props.data['currency']}
                     </IonLabel>
-                    <IonToggle checked={toggleMode} onIonChange={(event) => changeMode(event.detail.checked)}/>
+                    <IonToggle checked={toggleMode} onIonChange={(event) => setToggleMode(event.detail.checked)}/>
                 </IonItem>
-                <IonItem onClick={() => setAlertCash(true)} lines='none' style={{marginRight: '16px'}}>
-                    <IonProgressBar value={props.data['cash'] / props.data['sum']}/>
-                    <IonBadge slot='end'>
-                        {(props.data['cash'] / props.data['sum'] * 100).toFixed(1)}
-                        {props.data['sum'] === 0 ? '' : '%'}
-                    </IonBadge>
-                </IonItem>
+                {toggleMode ?
+                    <IonItem lines='none' style={{marginRight: '16px'}}
+                             onClick={() => setAlertCash(true)}>
+                        <IonProgressBar
+                            value={props.data['sum'] === 0 ? 0 : props.data['cash'] / props.data['sum']}
+                        />
+                        <IonBadge slot='end'>
+                            {(props.data['cash'] / props.data['sum'] * 100).toFixed(1)}
+                            {props.data['sum'] === 0 ? '' : '%'}
+                        </IonBadge>
+                    </IonItem>
+                :
+                    <IonItem lines='none' style={{marginRight: '16px'}}>
+                        <IonProgressBar
+                            value={0.5}
+                        />
+                        <IonBadge color='medium' slot='end'>
+                            wip...
+                        </IonBadge>
+                    </IonItem>
+                }
             </IonCard>
             <IonList>
                 {props.data['assets'] && props.data['assets'].map((value:AssetDTO, index:number) =>
@@ -109,17 +130,35 @@ const Balance = (props:any) => {
                                     </IonLabel>
                                 </IonCol>
                             </IonRow>
-                            <IonRow>
-                                <IonCol>
-                                    <IonProgressBar value={value['amount'] * value['price'] / props.data['sum']}
-                                                    style={{marginTop: '8px'}}/>
-                                </IonCol>
-                                <IonCol size='auto'>
-                                    <IonBadge style={{marginLeft: '20px'}}>
-                                        {(100 * value['amount'] * value['price'] / props.data['sum']).toFixed(1)}%
-                                    </IonBadge>
-                                </IonCol>
-                            </IonRow>
+                            {toggleMode ?
+                                <IonRow>
+                                    <IonCol>
+                                        <IonProgressBar style={{marginTop: '8px'}}
+                                            value={value['amount'] * value['price'] / props.data['sum']}
+                                        />
+                                    </IonCol>
+                                    <IonCol size='auto'>
+                                        <IonBadge style={{marginLeft: '20px'}}>
+                                            {(100 * value['amount'] * value['price'] / props.data['sum'])
+                                                .toFixed(1)}%
+                                        </IonBadge>
+                                    </IonCol>
+                                </IonRow>
+                            :
+                                <IonRow>
+                                    <IonCol>
+                                        <IonRange class='ion-no-padding' color='dark'
+                                                  value={value['target']} min={0} max={100}
+                                                  onIonChange={(event) => setTarget(event.detail.value as number, index)}
+                                        />
+                                    </IonCol>
+                                    <IonCol size='auto'>
+                                        <IonBadge color='medium' style={{marginLeft: '20px'}}>
+                                            {value['target']}%
+                                        </IonBadge>
+                                    </IonCol>
+                                </IonRow>
+                            }
                         </IonGrid>
                     </IonItem>
                 )}

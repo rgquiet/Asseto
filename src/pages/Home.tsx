@@ -38,7 +38,7 @@ const Home:React.FC = () => {
             directory: FilesystemDirectory.Data
         }).then((dir) => {
             const allPortfolios:string[] = [];
-            dir.files.forEach((name) => allPortfolios.push(name.slice(0, -5)));
+            dir.files.forEach((name:string) => allPortfolios.push(name.slice(0, -5)));
             setPortfolioNames(allPortfolios);
         });
     }, []);

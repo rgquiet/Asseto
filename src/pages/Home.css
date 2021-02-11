@@ -5,3 +5,11 @@ ion-item {
 ion-range {
     --height: 30px;
 }
+
+ion-alert .cus-dark {
+    color: var(--ion-color-dark) !important;
+}
+
+ion-alert .cus-danger {
+    color: var(--ion-color-danger) !important;
+}

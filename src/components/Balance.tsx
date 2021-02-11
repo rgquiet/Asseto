@@ -21,11 +21,11 @@ import React, { useState, useEffect } from 'react';
 import AssetDTO from '../dto/AssetDTO';
 
 const Balance = (props:any) => {
+    const [temp, setTemp] = useState<number>(-1);
     const [toggleMode, setToggleMode] = useState<boolean>(true);
     const [alertCash, setAlertCash] = useState<boolean>(false);
     const [alertEditAsset, setAlertEditAsset] = useState<boolean>(false);
-    const [alertAddAsset, setAlertAddAsset] = useState<boolean>(false);
-    const [temp, setTemp] = useState<number>(-1);
+    const [alertNewAsset, setAlertNewAsset] = useState<boolean>(false);
 
     useEffect(() => {
         if(temp === -1) {
@@ -53,7 +53,7 @@ const Balance = (props:any) => {
 
     const editAsset = (data:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
-            let array:AssetDTO[] = [...props.data['assets']];
+            const array:AssetDTO[] = [...props.data['assets']];
             array[temp] = new AssetDTO(
                 data['name'],
                 parseFloat(data['amount']),
@@ -64,7 +64,7 @@ const Balance = (props:any) => {
         }
     }
 
-    const addAsset = (data:any) => {
+    const newAsset = (data:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
             props.data['assets'] = [...props.data['assets'], new AssetDTO(
                 data['name'],
@@ -75,11 +75,17 @@ const Balance = (props:any) => {
         }
     }
 
+    const deleteAsset = () => {
+        const array:AssetDTO[] = [...props.data['assets']];
+        array.splice(temp, 1);
+        props.data['assets'] = array;
+    }
+
     const setTarget = (target:number, index:number) => {
         let targetSum:number = 0;
-        props.data['assets'].forEach((asset:AssetDTO, i:number) => {
+        props.data['assets'].forEach((dto:AssetDTO, i:number) => {
             if(i !== index) {
-                targetSum += asset['target'];
+                targetSum += dto['target'];
             }
         });
         if(targetSum + target <= 100) {
@@ -92,8 +98,8 @@ const Balance = (props:any) => {
 
     const calculateCashTarget = () => {
         let targetSum:number = 100;
-        props.data['assets'].forEach((asset:AssetDTO) => {
-            targetSum -= asset['target'];
+        props.data['assets'].forEach((dto:AssetDTO) => {
+            targetSum -= dto['target'];
         });
         return targetSum;
     }
@@ -227,7 +233,7 @@ const Balance = (props:any) => {
                 )}
             </IonList>
             <IonFab vertical='bottom' horizontal='end' slot='fixed'>
-                <IonFabButton onClick={() => setAlertAddAsset(true)}>
+                <IonFabButton onClick={() => setAlertNewAsset(true)}>
                     <IonIcon icon={add}/>
                 </IonFabButton>
             </IonFab>
@@ -252,7 +258,11 @@ const Balance = (props:any) => {
                     {
                         text: 'Confirm',
                         handler: (data) => {editCash(data)}
-                    }, 'Cancel'
+                    }, {
+                        text: 'Cancel',
+                        role: 'cancel',
+                        cssClass: 'cus-dark'
+                    }
                 ]}
             />
             <IonAlert
@@ -281,13 +291,17 @@ const Balance = (props:any) => {
                     {
                         text: 'Confirm',
                         handler: (data) => {editAsset(data)}
-                    }, 'Cancel'
+                    }, {
+                        text: 'Delete',
+                        cssClass: 'cus-danger',
+                        handler: () => {deleteAsset()}
+                    }
                 ]}
             />
             <IonAlert
-                isOpen={alertAddAsset}
-                onDidDismiss={() => setAlertAddAsset(false)}
-                header={'Add New Position'}
+                isOpen={alertNewAsset}
+                onDidDismiss={() => setAlertNewAsset(false)}
+                header={'New Position'}
                 inputs={[
                     {
                         name: 'name',
@@ -306,8 +320,12 @@ const Balance = (props:any) => {
                 buttons={[
                     {
                         text: 'Confirm',
-                        handler: (data) => {addAsset(data)}
-                    }, 'Cancel'
+                        handler: (data) => {newAsset(data)}
+                    }, {
+                        text: 'Cancel',
+                        role: 'cancel',
+                        cssClass: 'cus-dark'
+                    }
                 ]}
             />
         </IonContent>

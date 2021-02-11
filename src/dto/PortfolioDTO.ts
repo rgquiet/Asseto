@@ -1,6 +1,5 @@
 import AssetDTO from './AssetDTO';
 
-// @ts-ignore
 class PortfolioDTO {
     name:string;
     currency:string;
@@ -19,7 +18,6 @@ class PortfolioDTO {
     init(data:PortfolioDTO) {
         this.name = data['name'];
         this.currency = data['currency'];
-        //this._sum = data['_sum'];
         this._cash = data['_cash'];
         this.assets = data['_assets'];
     }
@@ -29,8 +27,8 @@ class PortfolioDTO {
             this._sum = this._cash;
         } else {
             let sum:number = 0;
-            this._assets.forEach((asset:AssetDTO, index:number, array:AssetDTO[]) => {
-                sum += asset.amount * asset.price;
+            this._assets.forEach((dto:AssetDTO, index:number, array:AssetDTO[]) => {
+                sum += dto['amount'] * dto['price'];
                 if(index === array.length - 1) {
                     sum += this._cash;
                     this._sum = parseFloat(sum.toFixed(2));

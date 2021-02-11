@@ -31,21 +31,29 @@ const Home:React.FC = () => {
     const [toastSave, setToastSave] = useState<boolean>(false);
     const [alertNew, setAlertNew] = useState<boolean>(false);
     const [alertReplace, setAlertReplace] = useState<boolean>(false);
+    const [alertEdit, setAlertEdit] = useState<boolean>(false);
 
     useEffect(() => {
         Filesystem.readdir({
             path: '',
             directory: FilesystemDirectory.Data
         }).then((dir) => {
-            const allPortfolios:string[] = [];
-            dir.files.forEach((name:string) => allPortfolios.push(name.slice(0, -5)));
-            setPortfolioNames(allPortfolios);
+            const array:string[] = [];
+            dir.files.forEach((name:string) => array.push(name.slice(0, -5)));
+            setPortfolioNames(array);
         });
     }, []);
 
+    const showSetting = (name:string) => {
+        readFile(name).then(() => {
+            setAlertEdit(true);
+        });
+    }
+
     const showPortfolio = (name:string) => {
-        readFile(name);
-        setModalPortfolio(true);
+        readFile(name).then(() => {
+            setModalPortfolio(true);
+        });
     }
 
     const closePortfolio = () => {
@@ -54,7 +62,7 @@ const Home:React.FC = () => {
     }
 
     const createPortfolio = (name:string) => {
-        if(name !== '') {
+        if(name.replace(/\s/g, '') !== '') {
             if(portfolioNames.includes(name)) {
                 setPortfolio(new PortfolioDTO(name));
                 setAlertReplace(true);
@@ -62,6 +70,49 @@ const Home:React.FC = () => {
                 createFile(name);
             }
         }
+    }
+
+    const savePortfolio = () => {
+        saveFile(portfolio['name']).then(() => {
+            setToastSave(true);
+        });
+    }
+
+    const deletePortfolio = () => {
+        deleteFile(portfolio['name']).then(() => {
+            const array:string[] = [...portfolioNames];
+            const index:number = array.indexOf(portfolio['name']);
+            array.splice(index, 1);
+            setPortfolioNames(array);
+            setPortfolio(new PortfolioDTO(''));
+        });
+    }
+
+    const renamePortfolio = (name:string) => {
+        if(name.replace(/\s/g, '') !== '' && !portfolioNames.includes(name)) {
+            deleteFile(portfolio['name']).then(() => {
+                const array:string[] = [...portfolioNames];
+                const index:number = array.indexOf(portfolio['name']);
+                array.splice(index, 1);
+                portfolio['name'] = name;
+                saveFile(portfolio['name']).then(() => {
+                    array.push(portfolio['name']);
+                    setPortfolioNames(array);
+                    setPortfolio(new PortfolioDTO(''));
+                });
+            });
+        }
+    }
+
+    const readFile = async (name:string) => {
+        return await Filesystem.readFile({
+            path: name + '.json',
+            directory: FilesystemDirectory.Data
+        }).then((result) => {
+            const dto:PortfolioDTO = new PortfolioDTO('');
+            dto.init(JSON.parse(result.data));
+            setPortfolio(dto);
+        });
     }
 
     const createFile = (name:string) => {
@@ -72,31 +123,25 @@ const Home:React.FC = () => {
             encoding: FilesystemEncoding.UTF8
         }).then(() => {
             if(portfolio['name'] !== name) {
-                setPortfolioNames([name, ...portfolioNames]);
+                setPortfolioNames([...portfolioNames, name]);
             }
             setPortfolio(new PortfolioDTO(''));
         });
     }
 
-    const saveFile = () => {
-        Filesystem.writeFile({
-            path: portfolio['name'] + '.json',
+    const saveFile = async (name:string) => {
+        return await Filesystem.writeFile({
+            path: name + '.json',
             data: JSON.stringify(portfolio),
             directory: FilesystemDirectory.Data,
             encoding: FilesystemEncoding.UTF8
-        }).then(() => {
-            setToastSave(true);
         });
     }
 
-    const readFile = (name:string) => {
-        Filesystem.readFile({
+    const deleteFile = async (name:string) => {
+        return await Filesystem.deleteFile({
             path: name + '.json',
             directory: FilesystemDirectory.Data
-        }).then((result) => {
-            let dto:PortfolioDTO = new PortfolioDTO('');
-            dto.init(JSON.parse(result.data));
-            setPortfolio(dto);
         });
     }
 
@@ -115,8 +160,9 @@ const Home:React.FC = () => {
             </IonHeader>
             <IonContent class='ion-padding'>
                 <IonList>
-                    {portfolioNames.map((value:string, index:number) =>
-                        <Portfolio handler={showPortfolio} value={value} key={index}/>
+                    {portfolioNames.map((name:string, index:number) =>
+                        <Portfolio name={name} key={index}
+                                   portfolio={showPortfolio} setting={showSetting}/>
                     )}
                 </IonList>
                 <IonModal isOpen={modalPortfolio}>
@@ -131,7 +177,7 @@ const Home:React.FC = () => {
                                 {portfolio['name']}: {portfolio['sum']}{portfolio['currency']}
                             </IonTitle>
                             <IonButtons slot='secondary'>
-                                <IonButton onClick={saveFile}>
+                                <IonButton onClick={savePortfolio}>
                                     <IonIcon slot='icon-only' icon={saveOutline}/>
                                 </IonButton>
                             </IonButtons>
@@ -160,7 +206,11 @@ const Home:React.FC = () => {
                         {
                             text: 'Create',
                             handler: (data) => {createPortfolio(data.name)}
-                        }, 'Cancel'
+                        }, {
+                            text: 'Cancel',
+                            role: 'cancel',
+                            cssClass: 'cus-dark'
+                        }
                     ]}
                 />
                 <IonAlert
@@ -168,15 +218,42 @@ const Home:React.FC = () => {
                     onDidDismiss={() => setAlertReplace(false)}
                     header={'Warning'}
                     message={
-                        'There is already a portfolio with the name ' +
+                        'There is already a portfolio with the name <strong>' +
                         portfolio['name'] +
-                        '! Do you want to replace it?'
+                        '</strong>! Do you want to replace it?'
                     }
                     buttons={[
                         {
                             text: 'Yes',
                             handler: () => {createFile(portfolio['name'])}
-                        }, 'No'
+                        }, {
+                            text: 'No',
+                            role: 'cancel',
+                            cssClass: 'cus-dark'
+                        }
+                    ]}
+                />
+                <IonAlert
+                    isOpen={alertEdit}
+                    onDidDismiss={() => setAlertEdit(false)}
+                    header={'Edit Portfolio'}
+                    inputs={[
+                        {
+                            name: 'name',
+                            type: 'text',
+                            value: portfolio['name'],
+                            placeholder: 'Enter a name...'
+                        }
+                    ]}
+                    buttons={[
+                        {
+                            text: 'Rename',
+                            handler: (data) => {renamePortfolio(data.name)}
+                        }, {
+                            text: 'Delete',
+                            cssClass: 'cus-danger',
+                            handler: () => {deletePortfolio()}
+                        }
                     ]}
                 />
             </IonContent>

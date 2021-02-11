@@ -11,14 +11,18 @@ import React from 'react';
 const Portfolio = (props:any) => {
 
     const portfolioHandler = () => {
-        props.handler(props.value);
+        props.portfolio(props.name);
+    }
+
+    const settingHandler = () => {
+        props.setting(props.name);
     }
 
     return (
         <IonItem style={{marginRight: '16px'}}>
-            <IonLabel onClick={portfolioHandler}>{props.value}</IonLabel>
+            <IonLabel onClick={portfolioHandler}>{props.name}</IonLabel>
             <IonButtons>
-                <IonButton onClick={() => console.log('wip: Rename and delete function')}>
+                <IonButton onClick={settingHandler}>
                     <IonIcon slot='icon-only' icon={settingsOutline}/>
                 </IonButton>
             </IonButtons>

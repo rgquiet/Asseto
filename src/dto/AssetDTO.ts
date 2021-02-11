@@ -1,4 +1,3 @@
-// @ts-ignore
 class AssetDTO {
     name:string;
     amount:number;

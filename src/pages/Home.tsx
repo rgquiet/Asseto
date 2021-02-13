@@ -20,13 +20,14 @@ import React, { useState, useEffect } from 'react';
 import Balance from '../components/Balance';
 import Portfolio from '../components/Portfolio';
 import PortfolioDTO from '../dto/PortfolioDTO';
+import OverviewDTO from '../dto/OverviewDTO';
 import './Home.css';
 
 const { Filesystem } = Plugins;
 
 const Home:React.FC = () => {
+    const [overview, setOverview] = useState<OverviewDTO[]>([]);
     const [portfolio, setPortfolio] = useState<PortfolioDTO>(new PortfolioDTO(''));
-    const [portfolioNames, setPortfolioNames] = useState<string[]>([]);
     const [modalPortfolio, setModalPortfolio] = useState<boolean>(false);
     const [toastSave, setToastSave] = useState<boolean>(false);
     const [alertNew, setAlertNew] = useState<boolean>(false);
@@ -34,13 +35,16 @@ const Home:React.FC = () => {
     const [alertEdit, setAlertEdit] = useState<boolean>(false);
 
     useEffect(() => {
-        Filesystem.readdir({
-            path: '',
-            directory: FilesystemDirectory.Data
-        }).then((dir) => {
-            const array:string[] = [];
-            dir.files.forEach((name:string) => array.push(name.slice(0, -5)));
-            setPortfolioNames(array);
+        Filesystem.readFile({
+            path: 'asseto.json',
+            directory: FilesystemDirectory.Data,
+            encoding: FilesystemEncoding.UTF8
+        }).then((result) => {
+            setOverview(JSON.parse(result.data));
+        }).catch(() => {
+            saveOverview().then(() => {
+                // wip: Init overview with all existing files
+            });
         });
     }, []);
 
@@ -62,8 +66,9 @@ const Home:React.FC = () => {
     }
 
     const createPortfolio = (name:string) => {
-        if(name.replace(/\s/g, '') !== '') {
-            if(portfolioNames.includes(name)) {
+        name = checkName(name);
+        if(name !== '_false') {
+            if(findOverviewByName(name) !== -1) {
                 setPortfolio(new PortfolioDTO(name));
                 setAlertReplace(true);
             } else {
@@ -74,40 +79,89 @@ const Home:React.FC = () => {
 
     const savePortfolio = () => {
         saveFile(portfolio['name']).then(() => {
-            setToastSave(true);
+            let index:number = findOverviewByName(portfolio['name']);
+            overview[index] = new OverviewDTO(
+                portfolio['name'],
+                portfolio['currency'],
+                portfolio['sum']
+            );
+            saveOverview().then(() => {
+                setToastSave(true);
+            }).catch(() => {
+                // wip...
+            });
         });
     }
 
     const deletePortfolio = () => {
         deleteFile(portfolio['name']).then(() => {
-            const array:string[] = [...portfolioNames];
-            const index:number = array.indexOf(portfolio['name']);
-            array.splice(index, 1);
-            setPortfolioNames(array);
+            let index:number = findOverviewByName(portfolio['name']);
+            overview.splice(index, 1);
+            saveOverview().catch(() => {
+                // wip...
+            });
             setPortfolio(new PortfolioDTO(''));
         });
     }
 
     const renamePortfolio = (name:string) => {
-        if(name.replace(/\s/g, '') !== '' && !portfolioNames.includes(name)) {
+        name = checkName(name);
+        if(name !== '_false' && findOverviewByName(name) === -1) {
             deleteFile(portfolio['name']).then(() => {
-                const array:string[] = [...portfolioNames];
-                const index:number = array.indexOf(portfolio['name']);
-                array.splice(index, 1);
+                overview.splice(findOverviewByName(portfolio['name']), 1);
                 portfolio['name'] = name;
                 saveFile(portfolio['name']).then(() => {
-                    array.push(portfolio['name']);
-                    setPortfolioNames(array);
+                    updateOverview(new OverviewDTO(
+                        portfolio['name'],
+                        portfolio['currency'],
+                        portfolio['sum']
+                    ));
                     setPortfolio(new PortfolioDTO(''));
                 });
             });
         }
     }
 
+    const checkName = (name:string) => {
+        name = name.replace(/[^a-zA-Z ]/g, '').trim();
+        if(name !== '' && name !== 'asseto') {
+            return name;
+        }
+        return '_false';
+    }
+
+    const findOverviewByName = (name:string) => {
+        for(let index in overview) {
+            if(overview[index]['name'] === name) {
+                return Number(index);
+            }
+        }
+        return -1;
+    }
+
+    const updateOverview = (dto:OverviewDTO) => {
+        const array:OverviewDTO[] = overview;
+        array.push(dto);
+        setOverview(array);
+        saveOverview().catch(() => {
+            // wip...
+        });
+    }
+
+    const saveOverview = async () => {
+        return await Filesystem.writeFile({
+            path: 'asseto.json',
+            data: JSON.stringify(overview),
+            directory: FilesystemDirectory.Data,
+            encoding: FilesystemEncoding.UTF8
+        });
+    }
+
     const readFile = async (name:string) => {
         return await Filesystem.readFile({
             path: name + '.json',
-            directory: FilesystemDirectory.Data
+            directory: FilesystemDirectory.Data,
+            encoding: FilesystemEncoding.UTF8
         }).then((result) => {
             const dto:PortfolioDTO = new PortfolioDTO('');
             dto.init(JSON.parse(result.data));
@@ -123,7 +177,13 @@ const Home:React.FC = () => {
             encoding: FilesystemEncoding.UTF8
         }).then(() => {
             if(portfolio['name'] !== name) {
-                setPortfolioNames([...portfolioNames, name]);
+                updateOverview(new OverviewDTO(name, '$', 0));
+            } else {
+                let index:number = findOverviewByName(name);
+                overview[index] = new OverviewDTO(name, '$', 0);
+                saveOverview().catch(() => {
+                    // wip...
+                });
             }
             setPortfolio(new PortfolioDTO(''));
         });
@@ -160,8 +220,8 @@ const Home:React.FC = () => {
             </IonHeader>
             <IonContent class='ion-padding'>
                 <IonList>
-                    {portfolioNames.map((name:string, index:number) =>
-                        <Portfolio name={name} key={index}
+                    {overview.map((dto:OverviewDTO, index:number) =>
+                        <Portfolio name={dto['name']} key={index}
                                    portfolio={showPortfolio} setting={showSetting}/>
                     )}
                 </IonList>

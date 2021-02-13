@@ -38,11 +38,11 @@ const Balance = (props:any) => {
                 setTemp(-1);
             }
         }
-    }, [temp]);
+    }, [temp, toggleMode]);
 
     const editCash = (data:any) => {
         if(data['currency'].replace(/\s/g, '') !== '' && data['cash'] >= 0) {
-            props.data['currency'] = data['currency'];
+            props.data['currency'] = data['currency'].trim();
             if(data['cash'] === '') {
                 props.data['cash'] = 0;
             } else {
@@ -55,7 +55,7 @@ const Balance = (props:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
             const array:AssetDTO[] = [...props.data['assets']];
             array[temp] = new AssetDTO(
-                data['name'],
+                data['name'].trim(),
                 parseFloat(data['amount']),
                 parseFloat(data['price']),
                 props.data['assets'][temp]['target']
@@ -67,7 +67,7 @@ const Balance = (props:any) => {
     const newAsset = (data:any) => {
         if(data['name'].replace(/\s/g, '') !== '' && data['amount'] > 0 && data['price'] > 0) {
             props.data['assets'] = [...props.data['assets'], new AssetDTO(
-                data['name'],
+                data['name'].trim(),
                 parseFloat(data['amount']),
                 parseFloat(data['price']),
                 0
@@ -112,7 +112,8 @@ const Balance = (props:any) => {
                         Cash: {toggleMode ?
                             props.data['cash'] + props.data['currency']
                         :
-                            props.data['sum'] * calculateCashTarget() / 100 + props.data['currency']
+                            (props.data['sum'] * calculateCashTarget() / 100)
+                            .toFixed(2) + props.data['currency']
                         }
                     </IonLabel>
                     {!toggleMode && <div>

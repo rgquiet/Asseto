@@ -11,12 +11,13 @@ import {
     IonModal,
     IonContent,
     IonToolbar,
+    IonFooter,
     IonHeader,
     IonPage
 } from '@ionic/react';
 import { addOutline, arrowBackOutline, saveOutline } from 'ionicons/icons';
 import { FilesystemDirectory, FilesystemEncoding, Plugins } from '@capacitor/core';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Balance from '../components/Balance';
 import Portfolio from '../components/Portfolio';
 import PortfolioDTO from '../dto/PortfolioDTO';
@@ -34,6 +35,39 @@ const Home:React.FC = () => {
     const [alertReplace, setAlertReplace] = useState<boolean>(false);
     const [alertEdit, setAlertEdit] = useState<boolean>(false);
 
+    const initOverview = useCallback(() => {
+        // wip: Not so pretty
+        saveOverview().then(() => {
+            Filesystem.readdir({
+                path: '',
+                directory: FilesystemDirectory.Data
+            }).then((dir) => {
+                const array:OverviewDTO[] = overview;
+                dir.files.forEach((name:string, index:number, names:string[]) => {
+                    if(name !== 'asseto.json') {
+                        Filesystem.readFile({
+                            path: name,
+                            directory: FilesystemDirectory.Data,
+                            encoding: FilesystemEncoding.UTF8
+                        }).then((result) => {
+                            const dto:PortfolioDTO = new PortfolioDTO('');
+                            dto.init(JSON.parse(result.data));
+                            array.push(new OverviewDTO(
+                                dto['name'],
+                                dto['currency'],
+                                dto['sum']
+                            ));
+                            if(index === names.length - 2) {
+                                setOverview(array);
+                                saveOverview();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    }, []);
+
     useEffect(() => {
         Filesystem.readFile({
             path: 'asseto.json',
@@ -42,11 +76,9 @@ const Home:React.FC = () => {
         }).then((result) => {
             setOverview(JSON.parse(result.data));
         }).catch(() => {
-            saveOverview().then(() => {
-                // wip: Init overview with all existing files
-            });
+            initOverview();
         });
-    }, []);
+    }, [initOverview]);
 
     const showSetting = (name:string) => {
         readFile(name).then(() => {
@@ -87,8 +119,6 @@ const Home:React.FC = () => {
             );
             saveOverview().then(() => {
                 setToastSave(true);
-            }).catch(() => {
-                // wip...
             });
         });
     }
@@ -97,9 +127,7 @@ const Home:React.FC = () => {
         deleteFile(portfolio['name']).then(() => {
             let index:number = findOverviewByName(portfolio['name']);
             overview.splice(index, 1);
-            saveOverview().catch(() => {
-                // wip...
-            });
+            saveOverview();
             setPortfolio(new PortfolioDTO(''));
         });
     }
@@ -143,9 +171,7 @@ const Home:React.FC = () => {
         const array:OverviewDTO[] = overview;
         array.push(dto);
         setOverview(array);
-        saveOverview().catch(() => {
-            // wip...
-        });
+        saveOverview();
     }
 
     const saveOverview = async () => {
@@ -181,9 +207,7 @@ const Home:React.FC = () => {
             } else {
                 let index:number = findOverviewByName(name);
                 overview[index] = new OverviewDTO(name, '$', 0);
-                saveOverview().catch(() => {
-                    // wip...
-                });
+                saveOverview();
             }
             setPortfolio(new PortfolioDTO(''));
         });
@@ -221,8 +245,8 @@ const Home:React.FC = () => {
             <IonContent class='ion-padding'>
                 <IonList>
                     {overview.map((dto:OverviewDTO, index:number) =>
-                        <Portfolio name={dto['name']} key={index}
-                                   portfolio={showPortfolio} setting={showSetting}/>
+                        <Portfolio key={index} portfolio={showPortfolio} setting={showSetting}
+                                   name={dto['name']} currency={dto['currency']} sum={dto['sum']}/>
                     )}
                 </IonList>
                 <IonModal isOpen={modalPortfolio}>
@@ -317,6 +341,11 @@ const Home:React.FC = () => {
                     ]}
                 />
             </IonContent>
+            <IonFooter>
+                <IonToolbar>
+                    <IonTitle>wip...</IonTitle>
+                </IonToolbar>
+            </IonFooter>
         </IonPage>
     );
 };

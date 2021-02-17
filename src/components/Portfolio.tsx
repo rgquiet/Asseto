@@ -21,6 +21,7 @@ const Portfolio = (props:any) => {
     return (
         <IonItem style={{marginRight: '16px'}}>
             <IonLabel onClick={portfolioHandler}>{props.name}</IonLabel>
+            <IonLabel onClick={portfolioHandler}>{props.sum}{props.currency}</IonLabel>
             <IonButtons>
                 <IonButton onClick={settingHandler}>
                     <IonIcon slot='icon-only' icon={settingsOutline}/>

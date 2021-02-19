@@ -18,31 +18,33 @@ import {
 import { addOutline, arrowBackOutline, saveOutline } from 'ionicons/icons';
 import { FilesystemDirectory, FilesystemEncoding, Plugins } from '@capacitor/core';
 import React, { useState, useCallback, useEffect } from 'react';
+import Currency from '../components/Currency';
 import Balance from '../components/Balance';
 import Portfolio from '../components/Portfolio';
 import PortfolioDTO from '../dto/PortfolioDTO';
 import OverviewDTO from '../dto/OverviewDTO';
+import AssetoDTO from '../dto/AssetoDTO';
 import './Home.css';
 
 const { Filesystem } = Plugins;
 
 const Home:React.FC = () => {
-    const [overview, setOverview] = useState<OverviewDTO[]>([]);
+    const [asseto, setAsseto] = useState<AssetoDTO>(new AssetoDTO());
     const [portfolio, setPortfolio] = useState<PortfolioDTO>(new PortfolioDTO(''));
     const [modalPortfolio, setModalPortfolio] = useState<boolean>(false);
+    const [modalCurrency, setModalCurrency] = useState<boolean>(false);
     const [toastSave, setToastSave] = useState<boolean>(false);
     const [alertNew, setAlertNew] = useState<boolean>(false);
     const [alertReplace, setAlertReplace] = useState<boolean>(false);
     const [alertEdit, setAlertEdit] = useState<boolean>(false);
 
-    const initOverview = useCallback(() => {
-        // wip: Not so pretty
-        saveOverview().then(() => {
+    const initAsseto = useCallback(() => {
+        saveAsseto().then(() => {
             Filesystem.readdir({
                 path: '',
                 directory: FilesystemDirectory.Data
             }).then((dir) => {
-                const array:OverviewDTO[] = overview;
+                const array:OverviewDTO[] = asseto['overview'];
                 dir.files.forEach((name:string, index:number, names:string[]) => {
                     if(name !== 'asseto.json') {
                         Filesystem.readFile({
@@ -58,8 +60,11 @@ const Home:React.FC = () => {
                                 dto['sum']
                             ));
                             if(index === names.length - 2) {
-                                setOverview(array);
-                                saveOverview();
+                                asseto['overview'] = array;
+                                const dto:AssetoDTO = new AssetoDTO();
+                                dto.init(asseto);
+                                setAsseto(dto);
+                                saveAsseto();
                             }
                         });
                     }
@@ -74,11 +79,30 @@ const Home:React.FC = () => {
             directory: FilesystemDirectory.Data,
             encoding: FilesystemEncoding.UTF8
         }).then((result) => {
-            setOverview(JSON.parse(result.data));
+            const dto:AssetoDTO = new AssetoDTO();
+            dto.init(JSON.parse(result.data));
+            setAsseto(dto);
         }).catch(() => {
-            initOverview();
+            initAsseto();
         });
-    }, [initOverview]);
+    }, [initAsseto]);
+
+    const checkName = (name:string) => {
+        name = name.replace(/[^a-zA-Z ]/g, '').trim();
+        if(name !== '' && name !== 'asseto') {
+            return name;
+        }
+        return '_false';
+    }
+
+    const findOverviewByName = (name:string) => {
+        for(let index in asseto['overview']) {
+            if(asseto['overview'][index]['name'] === name) {
+                return Number(index);
+            }
+        }
+        return -1;
+    }
 
     const showSetting = (name:string) => {
         readFile(name).then(() => {
@@ -97,6 +121,25 @@ const Home:React.FC = () => {
         setPortfolio(new PortfolioDTO(''));
     }
 
+    const renamePortfolio = (name:string) => {
+        name = checkName(name);
+        if(name !== '_false' && findOverviewByName(name) === -1) {
+            deleteFile(portfolio['name']).then(() => {
+                asseto['overview'].splice(findOverviewByName(portfolio['name']), 1);
+                portfolio['name'] = name;
+                saveFile(portfolio['name']).then(() => {
+                    asseto['overview'].push(new OverviewDTO(
+                        portfolio['name'],
+                        portfolio['currency'],
+                        portfolio['sum']
+                    ));
+                    saveAsseto();
+                    setPortfolio(new PortfolioDTO(''));
+                });
+            });
+        }
+    }
+
     const createPortfolio = (name:string) => {
         name = checkName(name);
         if(name !== '_false') {
@@ -109,77 +152,30 @@ const Home:React.FC = () => {
         }
     }
 
-    const savePortfolio = () => {
-        saveFile(portfolio['name']).then(() => {
-            let index:number = findOverviewByName(portfolio['name']);
-            overview[index] = new OverviewDTO(
-                portfolio['name'],
-                portfolio['currency'],
-                portfolio['sum']
-            );
-            saveOverview().then(() => {
-                setToastSave(true);
-            });
-        });
-    }
-
     const deletePortfolio = () => {
         deleteFile(portfolio['name']).then(() => {
-            let index:number = findOverviewByName(portfolio['name']);
-            overview.splice(index, 1);
-            saveOverview();
+            const index:number = findOverviewByName(portfolio['name']);
+            const array:OverviewDTO[] = asseto['overview'];
+            array.splice(index, 1);
+            asseto['overview'] = array;
+            saveAsseto();
             setPortfolio(new PortfolioDTO(''));
         });
     }
 
-    const renamePortfolio = (name:string) => {
-        name = checkName(name);
-        if(name !== '_false' && findOverviewByName(name) === -1) {
-            deleteFile(portfolio['name']).then(() => {
-                overview.splice(findOverviewByName(portfolio['name']), 1);
-                portfolio['name'] = name;
-                saveFile(portfolio['name']).then(() => {
-                    updateOverview(new OverviewDTO(
-                        portfolio['name'],
-                        portfolio['currency'],
-                        portfolio['sum']
-                    ));
-                    setPortfolio(new PortfolioDTO(''));
-                });
+    const savePortfolio = () => {
+        saveFile(portfolio['name']).then(() => {
+            const index:number = findOverviewByName(portfolio['name']);
+            const array:OverviewDTO[] = asseto['overview'];
+            array[index] = new OverviewDTO(
+                portfolio['name'],
+                portfolio['currency'],
+                portfolio['sum']
+            );
+            asseto['overview'] = array;
+            saveAsseto().then(() => {
+                setToastSave(true);
             });
-        }
-    }
-
-    const checkName = (name:string) => {
-        name = name.replace(/[^a-zA-Z ]/g, '').trim();
-        if(name !== '' && name !== 'asseto') {
-            return name;
-        }
-        return '_false';
-    }
-
-    const findOverviewByName = (name:string) => {
-        for(let index in overview) {
-            if(overview[index]['name'] === name) {
-                return Number(index);
-            }
-        }
-        return -1;
-    }
-
-    const updateOverview = (dto:OverviewDTO) => {
-        const array:OverviewDTO[] = overview;
-        array.push(dto);
-        setOverview(array);
-        saveOverview();
-    }
-
-    const saveOverview = async () => {
-        return await Filesystem.writeFile({
-            path: 'asseto.json',
-            data: JSON.stringify(overview),
-            directory: FilesystemDirectory.Data,
-            encoding: FilesystemEncoding.UTF8
         });
     }
 
@@ -203,13 +199,22 @@ const Home:React.FC = () => {
             encoding: FilesystemEncoding.UTF8
         }).then(() => {
             if(portfolio['name'] !== name) {
-                updateOverview(new OverviewDTO(name, '$', 0));
+                asseto['overview'].push(new OverviewDTO(name, '$', 0));
             } else {
-                let index:number = findOverviewByName(name);
-                overview[index] = new OverviewDTO(name, '$', 0);
-                saveOverview();
+                const index:number = findOverviewByName(name);
+                const array:OverviewDTO[] = asseto['overview'];
+                array[index] = new OverviewDTO(name, '$', 0);
+                asseto['overview'] = array;
             }
+            saveAsseto();
             setPortfolio(new PortfolioDTO(''));
+        });
+    }
+
+    const deleteFile = async (name:string) => {
+        return await Filesystem.deleteFile({
+            path: name + '.json',
+            directory: FilesystemDirectory.Data
         });
     }
 
@@ -222,18 +227,29 @@ const Home:React.FC = () => {
         });
     }
 
-    const deleteFile = async (name:string) => {
-        return await Filesystem.deleteFile({
-            path: name + '.json',
-            directory: FilesystemDirectory.Data
+    const saveAsseto = async () => {
+        return await Filesystem.writeFile({
+            path: 'asseto.json',
+            data: JSON.stringify(asseto),
+            directory: FilesystemDirectory.Data,
+            encoding: FilesystemEncoding.UTF8
         });
+    }
+
+    const updateAsseto = (dto:AssetoDTO) => {
+        setAsseto(dto);
+    }
+
+    const closeCurrency = () => {
+        setModalCurrency(false);
+        saveAsseto();
     }
 
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
-                    <IonLabel slot='start' style={{width: '48px'}}/>
+                    <IonLabel slot='start' style={{width: '52px'}}/>
                     <IonImg src='assets/asseto.png' style={{width: '100%', height: '30px'}}/>
                     <IonButtons slot='secondary'>
                         <IonButton onClick={() => setAlertNew(true)}>
@@ -244,7 +260,7 @@ const Home:React.FC = () => {
             </IonHeader>
             <IonContent class='ion-padding'>
                 <IonList>
-                    {overview.map((dto:OverviewDTO, index:number) =>
+                    {asseto['overview'].map((dto:OverviewDTO, index:number) =>
                         <Portfolio key={index} portfolio={showPortfolio} setting={showSetting}
                                    name={dto['name']} currency={dto['currency']} sum={dto['sum']}/>
                     )}
@@ -274,6 +290,22 @@ const Home:React.FC = () => {
                         message={'Saved successfully'}
                         duration={1000}
                     />
+                </IonModal>
+                <IonModal isOpen={modalCurrency}>
+                    <IonHeader>
+                        <IonToolbar>
+                            <IonButtons slot='start'>
+                                <IonButton onClick={closeCurrency}>
+                                    <IonIcon slot='icon-only' icon={arrowBackOutline}/>
+                                </IonButton>
+                            </IonButtons>
+                            <IonTitle class='ion-text-center'>
+                                Edit Currency Rate
+                            </IonTitle>
+                            <IonLabel slot='end' style={{width: '52px'}}/>
+                        </IonToolbar>
+                    </IonHeader>
+                    <Currency data={asseto} handler={updateAsseto}/>
                 </IonModal>
                 <IonAlert
                     isOpen={alertNew}
@@ -343,7 +375,9 @@ const Home:React.FC = () => {
             </IonContent>
             <IonFooter>
                 <IonToolbar>
-                    <IonTitle>wip...</IonTitle>
+                    <IonTitle class='ion-text-center' onClick={() => setModalCurrency(true)}>
+                        {asseto['total']}{asseto['main']}
+                    </IonTitle>
                 </IonToolbar>
             </IonFooter>
         </IonPage>

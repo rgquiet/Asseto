@@ -34,7 +34,6 @@ const Balance = (props:any) => {
             if(toggleMode) {
                 setAlertEditAsset(true);
             } else {
-                // wip: Only updated when temp changes (add props.data to deps)
                 setTemp(-1);
             }
         }
@@ -154,33 +153,33 @@ const Balance = (props:any) => {
                 }
             </IonCard>
             <IonList>
-                {props.data['assets'] && props.data['assets'].map((value:AssetDTO, index:number) =>
+                {props.data['assets'] && props.data['assets'].map((dto:AssetDTO, index:number) =>
                     <IonItem key={index} onClick={() => setTemp(index)} style={{marginRight: '16px'}}>
                         <IonGrid>
                             <IonRow>
                                 <IonCol>
-                                    <IonLabel>{value['name']}</IonLabel>
+                                    <IonLabel>{dto['name']}</IonLabel>
                                 </IonCol>
                                 <IonCol size='auto' style={{maxWidth: '30%'}}>
                                     {toggleMode ?
                                         <IonLabel class='ion-text-center'
                                                   style={{fontSize: '0.8em', marginTop: '4px'}}>
-                                            {value['amount']}@{value['price']}{props.data['currency']}
+                                            {dto['amount']}@{dto['price']}{props.data['currency']}
                                         </IonLabel>
                                     :
                                         <div>
-                                            {props.data['sum'] * value['target'] / 100
-                                            - value['amount'] * value['price'] >= 0 ?
+                                            {props.data['sum'] * dto['target'] / 100
+                                            - dto['amount'] * dto['price'] >= 0 ?
                                                 <IonLabel class='ion-text-center' color='success'
                                                           style={{fontSize: '0.8em', marginTop: '4px'}}>
-                                                    {(props.data['sum'] * value['target'] / 100
-                                                    - value['amount'] * value['price']).toFixed(2)}
+                                                    {(props.data['sum'] * dto['target'] / 100
+                                                    - dto['amount'] * dto['price']).toFixed(2)}
                                                 </IonLabel>
                                             :
                                                 <IonLabel class='ion-text-center' color='danger'
                                                           style={{fontSize: '0.8em', marginTop: '4px'}}>
-                                                    {(props.data['sum'] * value['target'] / 100
-                                                    - value['amount'] * value['price']).toFixed(2)}
+                                                    {(props.data['sum'] * dto['target'] / 100
+                                                    - dto['amount'] * dto['price']).toFixed(2)}
                                                 </IonLabel>
                                             }
                                         </div>
@@ -189,10 +188,10 @@ const Balance = (props:any) => {
                                 <IonCol>
                                     <IonLabel class='ion-text-right'>
                                         {toggleMode ?
-                                            (value['amount'] * value['price']).toFixed(2)
+                                            (dto['amount'] * dto['price']).toFixed(2)
                                             + props.data['currency']
                                         :
-                                            (props.data['sum'] * value['target'] / 100).toFixed(2)
+                                            (props.data['sum'] * dto['target'] / 100).toFixed(2)
                                             + props.data['currency']
                                         }
                                     </IonLabel>
@@ -202,12 +201,12 @@ const Balance = (props:any) => {
                                 <IonRow>
                                     <IonCol>
                                         <IonProgressBar style={{marginTop: '8px'}}
-                                            value={value['amount'] * value['price'] / props.data['sum']}
+                                            value={dto['amount'] * dto['price'] / props.data['sum']}
                                         />
                                     </IonCol>
                                     <IonCol size='auto'>
                                         <IonBadge style={{marginLeft: '20px'}}>
-                                            {(100 * value['amount'] * value['price'] / props.data['sum'])
+                                            {(100 * dto['amount'] * dto['price'] / props.data['sum'])
                                             .toFixed(1)}%
                                         </IonBadge>
                                     </IonCol>
@@ -216,7 +215,7 @@ const Balance = (props:any) => {
                                 <IonRow>
                                     <IonCol style={{paddingTop: 0, paddingBottom: 0}}>
                                         <IonRange class='ion-no-padding' color='dark'
-                                            value={value['target']} min={0} max={100}
+                                            value={dto['target']} min={0} max={100}
                                             onIonChange={(event) => setTarget(
                                                 event.detail.value as number, index
                                             )}
@@ -224,7 +223,7 @@ const Balance = (props:any) => {
                                     </IonCol>
                                     <IonCol size='auto'>
                                         <IonBadge color='medium' style={{marginLeft: '20px'}}>
-                                            {value['target']}%
+                                            {dto['target']}%
                                         </IonBadge>
                                     </IonCol>
                                 </IonRow>
